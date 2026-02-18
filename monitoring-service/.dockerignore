@@ -1,0 +1,7 @@
+# Compiled output
+build/
+.gradle/
+
+# Local dev scripts (contain credentials)
+start_dev.ps1
+ca.pem
