@@ -1,7 +1,24 @@
 import React from 'react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import JobStatusBadge from './JobStatusBadge';
 import { ArrowRight, Play } from 'lucide-react';
+
+/**
+ * Formats the elapsed duration between two dates into a human-readable string.
+ * e.g. "2m 35s", "45s", "1h 3m"
+ */
+const formatDuration = (startDate, endDate) => {
+    const ms = endDate - startDate;
+    if (ms < 0) return '—';
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+};
 
 const JobTable = ({ jobs }) => {
     if (!jobs || jobs.length === 0) {
@@ -26,7 +43,8 @@ const JobTable = ({ jobs }) => {
                             <th>Job Name</th>
                             <th>Run ID</th>
                             <th>Start Time</th>
-                            <th>Duration</th>
+                            <th>End Time</th>
+                            <th>Time Taken</th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
@@ -34,9 +52,11 @@ const JobTable = ({ jobs }) => {
                         {jobs.map((job) => {
                             const start = new Date(job.startTime);
                             const end = job.endTime ? new Date(job.endTime) : null;
-                            const duration = end
-                                ? formatDistanceToNow(start, { addSuffix: false })
-                                : 'Running...';
+                            const timeTaken = end
+                                ? formatDuration(start, end)
+                                : job.status === 'RUNNING'
+                                    ? formatDuration(start, new Date()) + ' (running)'
+                                    : '—';
 
                             return (
                                 <tr key={job.id}>
@@ -48,7 +68,14 @@ const JobTable = ({ jobs }) => {
                                     <td style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                                         {format(start, 'MMM d, HH:mm:ss')}
                                     </td>
-                                    <td style={{ fontSize: '0.875rem', color: '#6b7280' }}>{duration}</td>
+                                    <td style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                        {end ? format(end, 'MMM d, HH:mm:ss') : (
+                                            <span style={{ color: '#ca8a04', fontStyle: 'italic' }}>In progress…</span>
+                                        )}
+                                    </td>
+                                    <td style={{ fontSize: '0.875rem', color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>
+                                        {timeTaken}
+                                    </td>
                                     <td style={{ textAlign: 'right' }}>
                                         <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', marginLeft: 'auto' }}>
                                             <ArrowRight size={18} />

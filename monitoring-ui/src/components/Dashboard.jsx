@@ -3,12 +3,15 @@ import axios from 'axios';
 import JobTable from './JobTable';
 import { Activity, CheckCircle, XCircle, RefreshCw, Server } from 'lucide-react';
 
-const API_URL = 'http://localhost:8080/api/jobs';
+// Read from Vite env vars (set in .env or Vercel environment variables)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/jobs';
+const RELOAD_INTERVAL = parseInt(import.meta.env.VITE_RELOAD_INTERVAL || '60000', 10);
 
 const Dashboard = () => {
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState(new Date());
+    const [error, setError] = useState(null);
 
     const fetchJobs = async () => {
         try {
@@ -17,8 +20,10 @@ const Dashboard = () => {
             const sorted = response.data.sort((a, b) => b.id - a.id);
             setJobs(sorted);
             setLastUpdated(new Date());
-        } catch (error) {
-            console.error('Error fetching jobs:', error);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching jobs:', err);
+            setError('Failed to connect to backend.');
         } finally {
             setLoading(false);
         }
@@ -26,7 +31,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchJobs();
-        const interval = setInterval(fetchJobs, 5000); // Poll every 5 seconds
+        const interval = setInterval(fetchJobs, RELOAD_INTERVAL);
         return () => clearInterval(interval);
     }, []);
 
@@ -46,17 +51,21 @@ const Dashboard = () => {
                         <div className="logo-icon">
                             <Server size={20} />
                         </div>
-                        <span>Pipeline Monitor</span>
+                        <span>Job Monitor</span>
                     </div>
                     <div className="flex items-center gap-4 text-secondary">
-                        <span className="flex items-center gap-2">
-                            <span style={{ display: 'flex', position: 'relative', width: '10px', height: '10px' }}>
-                                <span style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: '#4ade80', opacity: 0.75, animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite' }}></span>
-                                <span style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', background: '#22c55e' }}></span>
+                        {error ? (
+                            <span style={{ color: '#dc2626', fontSize: '0.875rem' }}>⚠ {error}</span>
+                        ) : (
+                            <span className="flex items-center gap-2">
+                                <span style={{ display: 'flex', position: 'relative', width: '10px', height: '10px' }}>
+                                    <span style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', background: '#4ade80', opacity: 0.75, animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite' }}></span>
+                                    <span style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', background: '#22c55e' }}></span>
+                                </span>
+                                Live · every {RELOAD_INTERVAL / 1000}s
                             </span>
-                            Live Updates
-                        </span>
-                        <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
+                        )}
+                        <span>Updated: {lastUpdated.toLocaleTimeString()}</span>
                         <button
                             onClick={fetchJobs}
                             style={{ padding: '8px', borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer' }}
