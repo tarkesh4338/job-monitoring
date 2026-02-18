@@ -34,3 +34,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Local Config ###
+start_dev.ps1
+ca.pem
