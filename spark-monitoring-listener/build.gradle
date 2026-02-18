@@ -1,0 +1,45 @@
+plugins {
+    id 'java-library'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.pipeline.listener'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    // Spark dependencies are provided at runtime
+    compileOnly 'org.apache.spark:spark-core_2.12:3.5.0'
+    
+    // HTTP Client and JSON
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    
+    // Testing
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+    testImplementation 'org.mockito:mockito-core:5.3.1'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Shadow JAR to include dependencies (Jackson) but exclude Spark
+shadowJar {
+    archiveClassifier.set('')
+}
+
+task runTestJob(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    // Ensure spark-core is on the classpath for the test run
+    classpath += configurations.compileOnly
+    mainClass = 'com.pipeline.app.TestSparkApp'
+}
