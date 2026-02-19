@@ -50,8 +50,8 @@ const Dashboard = () => {
             if (statusToFetch !== 'ALL') params.status = statusToFetch;
             if (filtersToUse.jobName) params.jobName = filtersToUse.jobName;
             if (filtersToUse.runId) params.runId = filtersToUse.runId;
-            if (filtersToUse.dateFrom) params.startTimeFrom = `${filtersToUse.dateFrom}T00:00:00`;
-            if (filtersToUse.dateTo) params.startTimeTo = `${filtersToUse.dateTo}T23:59:59`;
+            if (filtersToUse.dateFrom) params.startTimeFrom = filtersToUse.dateFrom;
+            if (filtersToUse.dateTo) params.startTimeTo = filtersToUse.dateTo;
 
             const response = await axios.get(API_URL, { params });
             setJobs(response.data.content);
@@ -170,13 +170,13 @@ const Dashboard = () => {
                             />
                             <FilterInput
                                 label="From"
-                                type="date"
+                                type="datetime-local"
                                 value={filters.dateFrom}
                                 onChange={v => updateFilter('dateFrom', v)}
                             />
                             <FilterInput
                                 label="To"
-                                type="date"
+                                type="datetime-local"
                                 value={filters.dateTo}
                                 onChange={v => updateFilter('dateTo', v)}
                             />
@@ -200,11 +200,11 @@ const Dashboard = () => {
                     ) : (
                         <>
                             <JobTable jobs={jobs} />
-                            
+
                             {/* Pagination */}
                             <div className="pagination-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem', padding: '1rem 0' }}>
-                                <button 
-                                    disabled={page === 0} 
+                                <button
+                                    disabled={page === 0}
                                     onClick={() => setPage(p => p - 1)}
                                     style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'white', cursor: page === 0 ? 'not-allowed' : 'pointer', opacity: page === 0 ? 0.5 : 1 }}
                                 >
@@ -214,8 +214,8 @@ const Dashboard = () => {
                                     Page <strong>{page + 1}</strong> of <strong>{totalPages || 1}</strong>
                                     <span style={{ marginLeft: '1rem' }}>({totalElements} total records)</span>
                                 </span>
-                                <button 
-                                    disabled={page >= totalPages - 1} 
+                                <button
+                                    disabled={page >= totalPages - 1}
                                     onClick={() => setPage(p => p + 1)}
                                     style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'white', cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer', opacity: page >= totalPages - 1 ? 0.5 : 1 }}
                                 >
