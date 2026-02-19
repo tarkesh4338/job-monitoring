@@ -1,6 +1,6 @@
 package com.pipeline.app;
 
-import com.pipeline.listener.SparkJobListener;
+import com.pipeline.listener.SparkAppListener;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -16,7 +16,7 @@ public class TestSparkApp {
                 .setAppName("Test Monitoring Job")
                 .setMaster("local[*]")
                 // Register our listener
-                .set("spark.extraListeners", SparkJobListener.class.getName())
+                .set("spark.extraListeners", SparkAppListener.class.getName())
                 // Backend URL (assumes local backend is running)
                 .set("spark.monitoring.backend.url", "http://localhost:8080");
 
