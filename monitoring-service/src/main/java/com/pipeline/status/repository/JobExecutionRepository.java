@@ -16,4 +16,6 @@ public interface JobExecutionRepository
     Optional<JobExecution> findByRunId(String runId);
 
     Optional<JobExecution> findByJobNameAndRunId(String jobName, String runId);
+
+    long countByStatus(JobExecution.Status status);
 }

@@ -5,13 +5,16 @@ import com.pipeline.status.repository.JobExecutionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.pipeline.status.repository.JobExecutionSpecifications;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -80,19 +83,29 @@ public class JobExecutionController {
     }
 
     @GetMapping
-    public List<JobExecution> getAllJobs(
+    public Page<JobExecution> getAllJobs(
             @RequestParam(required = false) String jobName,
             @RequestParam(required = false) String runId,
             @RequestParam(required = false) JobExecution.Status status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTimeFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTimeTo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTimeFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTimeTo) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTimeTo,
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
 
         return repository.findAll(
                 JobExecutionSpecifications.withFilters(jobName, runId, status, startTimeFrom, startTimeTo, endTimeFrom,
                         endTimeTo),
-                Sort.by(Sort.Direction.DESC, "id"));
+                pageable);
+    }
+
+    @GetMapping("/stats")
+    public Map<String, Long> getStats() {
+        return Map.of(
+                "ALL", repository.count(),
+                "RUNNING", repository.countByStatus(JobExecution.Status.RUNNING),
+                "SUCCESS", repository.countByStatus(JobExecution.Status.SUCCESS),
+                "FAILED", repository.countByStatus(JobExecution.Status.FAILED));
     }
 
     @GetMapping("/{id}")

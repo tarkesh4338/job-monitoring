@@ -17,20 +17,49 @@ const DEFAULT_FILTERS = { jobName: '', runId: '', dateFrom: '', dateTo: '' };
 
 const Dashboard = () => {
     const [jobs, setJobs] = useState([]);
+    const [stats, setStats] = useState({ ALL: 0, RUNNING: 0, SUCCESS: 0, FAILED: 0 });
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('ALL');
     const [filters, setFilters] = useState(DEFAULT_FILTERS);
+    const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS);
     const [showFilters, setShowFilters] = useState(false);
 
-    const fetchJobs = async () => {
+    const fetchStats = async () => {
         try {
-            const response = await axios.get(API_URL);
-            const sorted = response.data.sort((a, b) => b.id - a.id);
-            setJobs(sorted);
+            const response = await axios.get(`${API_URL}/stats`);
+            setStats(response.data);
+        } catch (err) {
+            console.error('Error fetching stats:', err);
+        }
+    };
+
+    const fetchJobs = async (pageToFetch = page, statusToFetch = activeTab, filtersToUse = appliedFilters) => {
+        setLoading(true);
+        try {
+            const params = {
+                page: pageToFetch,
+                size: 10,
+                sort: 'id,desc'
+            };
+
+            if (statusToFetch !== 'ALL') params.status = statusToFetch;
+            if (filtersToUse.jobName) params.jobName = filtersToUse.jobName;
+            if (filtersToUse.runId) params.runId = filtersToUse.runId;
+            if (filtersToUse.dateFrom) params.startTimeFrom = `${filtersToUse.dateFrom}T00:00:00`;
+            if (filtersToUse.dateTo) params.startTimeTo = `${filtersToUse.dateTo}T23:59:59`;
+
+            const response = await axios.get(API_URL, { params });
+            setJobs(response.data.content);
+            setTotalPages(response.data.totalPages);
+            setTotalElements(response.data.totalElements);
             setLastUpdated(new Date());
             setError(null);
+            fetchStats();
         } catch (err) {
             console.error('Error fetching jobs:', err);
             setError('Failed to connect to backend.');
@@ -40,41 +69,25 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        fetchJobs();
-        const interval = setInterval(fetchJobs, RELOAD_INTERVAL);
+        fetchJobs(0, activeTab, appliedFilters);
+        const interval = setInterval(() => fetchJobs(page, activeTab, appliedFilters), RELOAD_INTERVAL);
         return () => clearInterval(interval);
-    }, []);
+    }, [page, activeTab, appliedFilters]);
 
-    const stats = useMemo(() => ({
-        ALL: jobs.length,
-        RUNNING: jobs.filter(j => j.status === 'RUNNING').length,
-        SUCCESS: jobs.filter(j => j.status === 'SUCCESS').length,
-        FAILED: jobs.filter(j => j.status === 'FAILED').length,
-    }), [jobs]);
+    const handleApplyFilters = () => {
+        setAppliedFilters(filters);
+        setPage(0);
+    };
 
-    const filteredJobs = useMemo(() => {
-        return jobs.filter(job => {
-            if (activeTab !== 'ALL' && job.status !== activeTab) return false;
-            if (filters.jobName && !job.jobName?.toLowerCase().includes(filters.jobName.toLowerCase())) return false;
-            if (filters.runId && !job.runId?.toLowerCase().includes(filters.runId.toLowerCase())) return false;
-            if (filters.dateFrom) {
-                const from = new Date(filters.dateFrom);
-                if (new Date(job.startTime) < from) return false;
-            }
-            if (filters.dateTo) {
-                const to = new Date(filters.dateTo);
-                to.setHours(23, 59, 59, 999);
-                if (new Date(job.startTime) > to) return false;
-            }
-            return true;
-        });
-    }, [jobs, activeTab, filters]);
-
-    const hasActiveFilters = Object.values(filters).some(v => v !== '');
-
-    const clearFilters = () => setFilters(DEFAULT_FILTERS);
+    const handleClearFilters = () => {
+        setFilters(DEFAULT_FILTERS);
+        setAppliedFilters(DEFAULT_FILTERS);
+        setPage(0);
+    };
 
     const updateFilter = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
+
+    const hasAppliedFilters = Object.values(appliedFilters).some(v => v !== '');
 
     return (
         <div className="dashboard-container">
@@ -97,7 +110,7 @@ const Dashboard = () => {
                             </span>
                         )}
                         <span>Updated: {lastUpdated.toLocaleTimeString()}</span>
-                        <button onClick={fetchJobs} style={{ padding: '8px', borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer' }} title="Refresh now">
+                        <button onClick={() => fetchJobs()} style={{ padding: '8px', borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer' }} title="Refresh now">
                             <RefreshCw size={18} />
                         </button>
                     </div>
@@ -105,7 +118,6 @@ const Dashboard = () => {
             </header>
 
             <main className="container" style={{ paddingBottom: '2rem', paddingTop: '2rem' }}>
-                {/* Stats Grid */}
                 <div className="stats-grid">
                     <StatCard label="Total Jobs" value={stats.ALL} icon={Activity} color="#2563eb" bg="#eff6ff" />
                     <StatCard label="Running" value={stats.RUNNING} icon={Activity} color="#ca8a04" bg="#fefce8" />
@@ -113,13 +125,15 @@ const Dashboard = () => {
                     <StatCard label="Failed" value={stats.FAILED} icon={XCircle} color="#dc2626" bg="#fef2f2" />
                 </div>
 
-                {/* Status Tabs */}
                 <div className="tabs-bar">
                     {STATUS_TABS.map(tab => (
                         <button
                             key={tab.key}
                             className={`tab-btn ${activeTab === tab.key ? 'tab-btn--active' : ''}`}
-                            onClick={() => setActiveTab(tab.key)}
+                            onClick={() => {
+                                setActiveTab(tab.key);
+                                setPage(0);
+                            }}
                         >
                             {tab.label}
                             <span className={`tab-count ${activeTab === tab.key ? 'tab-count--active' : ''}`}>
@@ -128,19 +142,17 @@ const Dashboard = () => {
                         </button>
                     ))}
 
-                    {/* Filter toggle button — right side */}
                     <button
-                        className={`filter-toggle-btn ${showFilters || hasActiveFilters ? 'filter-toggle-btn--active' : ''}`}
+                        className={`filter-toggle-btn ${showFilters || hasAppliedFilters ? 'filter-toggle-btn--active' : ''}`}
                         onClick={() => setShowFilters(v => !v)}
                         style={{ marginLeft: 'auto' }}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
                         Filters
-                        {hasActiveFilters && <span className="filter-active-dot" />}
+                        {hasAppliedFilters && <span className="filter-active-dot" />}
                     </button>
                 </div>
 
-                {/* Filter Bar */}
                 {showFilters && (
                     <div className="filter-bar">
                         <div className="filter-bar-inner">
@@ -168,26 +180,49 @@ const Dashboard = () => {
                                 value={filters.dateTo}
                                 onChange={v => updateFilter('dateTo', v)}
                             />
-                            {hasActiveFilters && (
-                                <button className="clear-filters-btn" onClick={clearFilters}>
-                                    ✕ Clear
+                            <div className="filter-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', paddingBottom: '2px' }}>
+                                <button className="apply-filters-btn" onClick={handleApplyFilters} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: '500' }}>
+                                    Apply
                                 </button>
-                            )}
+                                {hasAppliedFilters && (
+                                    <button className="clear-filters-btn" onClick={handleClearFilters}>
+                                        ✕ Clear
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        {hasActiveFilters && (
-                            <p className="filter-result-count">
-                                Showing <strong>{filteredJobs.length}</strong> of <strong>{jobs.length}</strong> jobs
-                            </p>
-                        )}
                     </div>
                 )}
 
-                {/* Table */}
                 <div style={{ marginTop: '1rem' }}>
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: '3rem' }}>Loading…</div>
                     ) : (
-                        <JobTable jobs={filteredJobs} />
+                        <>
+                            <JobTable jobs={jobs} />
+                            
+                            {/* Pagination */}
+                            <div className="pagination-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem', padding: '1rem 0' }}>
+                                <button 
+                                    disabled={page === 0} 
+                                    onClick={() => setPage(p => p - 1)}
+                                    style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'white', cursor: page === 0 ? 'not-allowed' : 'pointer', opacity: page === 0 ? 0.5 : 1 }}
+                                >
+                                    Previous
+                                </button>
+                                <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                                    Page <strong>{page + 1}</strong> of <strong>{totalPages || 1}</strong>
+                                    <span style={{ marginLeft: '1rem' }}>({totalElements} total records)</span>
+                                </span>
+                                <button 
+                                    disabled={page >= totalPages - 1} 
+                                    onClick={() => setPage(p => p + 1)}
+                                    style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: 'white', cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer', opacity: page >= totalPages - 1 ? 0.5 : 1 }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
             </main>
