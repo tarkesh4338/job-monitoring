@@ -69,8 +69,8 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        fetchJobs(0, activeTab, appliedFilters);
-        const interval = setInterval(() => fetchJobs(page, activeTab, appliedFilters), RELOAD_INTERVAL);
+        fetchJobs();
+        const interval = setInterval(fetchJobs, RELOAD_INTERVAL);
         return () => clearInterval(interval);
     }, [page, activeTab, appliedFilters]);
 

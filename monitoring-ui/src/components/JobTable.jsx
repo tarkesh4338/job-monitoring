@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import JobStatusBadge from './JobStatusBadge';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight, Play, ChevronUp, ChevronDown } from 'lucide-react';
 
 /**
  * Formats the elapsed duration between two dates into a human-readable string.
@@ -21,6 +21,41 @@ const formatDuration = (startDate, endDate) => {
 };
 
 const JobTable = ({ jobs }) => {
+    const [sortConfig, setSortConfig] = useState({ key: 'startTime', direction: 'desc' });
+
+    const sortedJobs = useMemo(() => {
+        let sortableJobs = [...jobs];
+        if (sortConfig.key) {
+            sortableJobs.sort((a, b) => {
+                const aVal = a[sortConfig.key] ? new Date(a[sortConfig.key]) : new Date(0);
+                const bVal = b[sortConfig.key] ? new Date(b[sortConfig.key]) : new Date(0);
+                if (aVal < bVal) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aVal > bVal) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableJobs;
+    }, [jobs, sortConfig]);
+
+    const requestSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const SortIcon = ({ columnKey }) => {
+        if (sortConfig.key !== columnKey) return <ChevronDown size={14} style={{ marginLeft: '4px', opacity: 0.3 }} />;
+        return sortConfig.direction === 'asc'
+            ? <ChevronUp size={14} style={{ marginLeft: '4px', color: 'var(--primary)' }} />
+            : <ChevronDown size={14} style={{ marginLeft: '4px', color: 'var(--primary)' }} />;
+    };
+
     if (!jobs || jobs.length === 0) {
         return (
             <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
@@ -42,14 +77,19 @@ const JobTable = ({ jobs }) => {
                             <th>Status</th>
                             <th>Job Name</th>
                             <th>Run ID</th>
-                            <th>Start Time</th>
-                            <th>End Time</th>
+                            <th onClick={() => requestSort('startTime')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                Start Time <SortIcon columnKey="startTime" />
+                            </th>
+                            <th onClick={() => requestSort('endTime')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                End Time <SortIcon columnKey="endTime" />
+                            </th>
                             <th>Time Taken</th>
+                            <th>Error Message</th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {jobs.map((job) => {
+                        {sortedJobs.map((job) => {
                             const start = new Date(job.startTime);
                             const end = job.endTime ? new Date(job.endTime) : null;
                             const timeTaken = end
@@ -75,6 +115,9 @@ const JobTable = ({ jobs }) => {
                                     </td>
                                     <td style={{ fontSize: '0.875rem', color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>
                                         {timeTaken}
+                                    </td>
+                                    <td style={{ fontSize: '0.875rem', color: '#dc2626', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={job.errorMessage}>
+                                        {job.status === 'FAILED' ? (job.errorMessage || '—') : ''}
                                     </td>
                                     <td style={{ textAlign: 'right' }}>
                                         <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', marginLeft: 'auto' }}>
