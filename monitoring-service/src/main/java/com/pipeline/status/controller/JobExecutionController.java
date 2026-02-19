@@ -4,6 +4,9 @@ import com.pipeline.status.model.JobExecution;
 import com.pipeline.status.repository.JobExecutionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.pipeline.status.repository.JobExecutionSpecifications;
+import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -77,8 +80,19 @@ public class JobExecutionController {
     }
 
     @GetMapping
-    public List<JobExecution> getAllJobs() {
-        return repository.findAll();
+    public List<JobExecution> getAllJobs(
+            @RequestParam(required = false) String jobName,
+            @RequestParam(required = false) String runId,
+            @RequestParam(required = false) JobExecution.Status status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTimeFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTimeTo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTimeFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTimeTo) {
+
+        return repository.findAll(
+                JobExecutionSpecifications.withFilters(jobName, runId, status, startTimeFrom, startTimeTo, endTimeFrom,
+                        endTimeTo),
+                Sort.by(Sort.Direction.DESC, "id"));
     }
 
     @GetMapping("/{id}")
