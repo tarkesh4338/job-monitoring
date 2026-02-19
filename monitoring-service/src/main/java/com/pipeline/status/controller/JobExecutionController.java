@@ -19,28 +19,47 @@ public class JobExecutionController {
     private final JobExecutionRepository repository;
 
     @PostMapping
-    public ResponseEntity<JobExecution> startJob(@RequestBody JobExecution execution) {
-        log.info("Starting execution for job: {}", execution.getJobName());
+    public ResponseEntity<?> startJob(@RequestBody JobExecution execution) {
+        ResponseEntity<String> validationResponse = validateJobRequest(execution);
+        if (validationResponse != null) {
+            return validationResponse;
+        }
+
+        log.info("Starting execution for job: {} (runId: {})", execution.getJobName(), execution.getRunId());
         execution.setStartTime(LocalDateTime.now());
         execution.setStatus(JobExecution.Status.RUNNING);
-        JobExecution saved = repository.save(execution);
-        return ResponseEntity.ok(saved);
+        try {
+            JobExecution saved = repository.save(execution);
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            log.error("Failed to save job execution: {}", e.getMessage());
+            return ResponseEntity.internalServerError().body("Possible duplicate or database error: " + e.getMessage());
+        }
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<JobExecution> updateJob(@PathVariable Long id, @RequestBody JobExecution executionUpdates) {
-        log.info("Updating job execution id: {}", id);
-        return repository.findById(id)
+    @PutMapping
+    public ResponseEntity<?> updateJob(@RequestBody JobExecution executionUpdates) {
+        ResponseEntity<String> validationResponse = validateJobRequest(executionUpdates);
+        if (validationResponse != null) {
+            return validationResponse;
+        }
+
+        String jobName = executionUpdates.getJobName();
+        String runId = executionUpdates.getRunId();
+
+        log.info("Updating job execution: {} (runId: {})", jobName, runId);
+        return repository.findByJobNameAndRunId(jobName, runId)
                 .map(existing -> {
                     if (executionUpdates.getStatus() != null) {
                         existing.setStatus(executionUpdates.getStatus());
                     }
                     if (executionUpdates.getEndTime() != null) {
                         existing.setEndTime(executionUpdates.getEndTime());
-                    } else if (executionUpdates.getStatus() == JobExecution.Status.SUCCESS || executionUpdates.getStatus() == JobExecution.Status.FAILED) {
-                         existing.setEndTime(LocalDateTime.now());
+                    } else if (executionUpdates.getStatus() == JobExecution.Status.SUCCESS
+                            || executionUpdates.getStatus() == JobExecution.Status.FAILED) {
+                        existing.setEndTime(LocalDateTime.now());
                     }
-                    
+
                     if (executionUpdates.getErrorMessage() != null) {
                         existing.setErrorMessage(executionUpdates.getErrorMessage());
                     }
@@ -49,11 +68,19 @@ public class JobExecutionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    private ResponseEntity<String> validateJobRequest(JobExecution execution) {
+        if (execution.getJobName() == null || execution.getJobName().trim().isEmpty() ||
+                execution.getRunId() == null || execution.getRunId().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Both jobName and runId are mandatory");
+        }
+        return null;
+    }
+
     @GetMapping
     public List<JobExecution> getAllJobs() {
         return repository.findAll();
     }
-    
+
     @GetMapping("/{id}")
     public ResponseEntity<JobExecution> getJob(@PathVariable Long id) {
         return repository.findById(id)

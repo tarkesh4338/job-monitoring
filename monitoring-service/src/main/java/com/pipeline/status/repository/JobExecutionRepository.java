@@ -10,5 +10,8 @@ import java.util.Optional;
 @Repository
 public interface JobExecutionRepository extends JpaRepository<JobExecution, Long> {
     List<JobExecution> findByJobName(String jobName);
+
     Optional<JobExecution> findByRunId(String runId);
+
+    Optional<JobExecution> findByJobNameAndRunId(String jobName, String runId);
 }
