@@ -2,6 +2,9 @@
 
 A flexible monitoring platform designed to track any type of long-running job or process. While it includes a Spark listener, the system is fully accessible via a REST API, allowing integration with any language or framework.
 
+### Dashboard
+![Dashboard Screenshot](./assets/dashboard.png)
+
 ## System Architecture
 
 - **monitoring-service**: Spring Boot REST API with PostgreSQL storage. Supports dynamic filtering and pagination.
