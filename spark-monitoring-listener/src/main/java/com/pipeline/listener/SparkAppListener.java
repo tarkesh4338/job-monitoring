@@ -29,6 +29,7 @@ public class SparkAppListener extends SparkListener {
         
         monitoringClient.createJobAsync(new JobStaus(appName, appId))
             .thenRun(() -> {
+                appToJobIdMap.put(appName, appId);
                 logger.info("Application monitoring started: " + appName + " (App ID: " + appId + ")");
             })
             .exceptionally(throwable -> {
