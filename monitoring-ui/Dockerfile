@@ -13,7 +13,7 @@ COPY . .
 # Pass VITE_API_URL during build time (if needed by build process)
 # For Docker Compose, we can also use runtime env if Vite is configured for it,
 # but usually Vite replaces these at build time.
-ARG VITE_API_URL=/api
+ARG VITE_API_URL=/api/jobs
 ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build

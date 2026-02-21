@@ -37,7 +37,7 @@ services:
       context: ./monitoring-ui
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=/api
+        - VITE_API_URL=/api/jobs
     container_name: monitoring-ui
     ports:
       - "80:80"
