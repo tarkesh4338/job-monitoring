@@ -29,6 +29,9 @@ The easiest way to run the entire stack (Database, Backend, and UI) is using Doc
 3. Access the Dashboard at: [http://localhost](http://localhost)
 4. The Backend API is available at: [http://localhost:8080](http://localhost:8080)
 
+> [!NOTE]
+> On the first run, a `seed-data` container will automatically populate the database with a few example jobs (Running, Success, and Failure cases) so you can see the UI in action immediately.
+
 ---
 
 ## 🛠️ Integration Guide (Generic Usage)
@@ -92,3 +95,10 @@ cd spark-monitoring-listener
 - **Advanced Filtering**: Search by name, status, or precise datetime ranges.
 - **Scalable UI**: Paged results and server-side filtering for large job histories.
 - **Error Visibility**: Direct access to failure logs in the history table.
+
+---
+
+## 🖼️ Screenshots
+To add screenshots to this documentation:
+1. Place your image files in the `assets/` folder.
+2. Link them in this file using: `![Description](./assets/filename.png)`

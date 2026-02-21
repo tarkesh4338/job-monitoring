@@ -43,3 +43,22 @@ services:
       - "80:80"
     depends_on:
       - monitoring-service
+
+  seed-data:
+    image: curlimages/curl
+    container_name: monitoring-seed
+    restart: "no"
+    depends_on:
+      - monitoring-service
+    command: >
+      sh -c "
+        echo 'Waiting 20s for service to be ready...' &&
+        sleep 20 &&
+        echo 'Seeding test data...' &&
+        curl -s -X POST http://monitoring-service:8080/api/jobs -H 'Content-Type: application/json' -d '{\"jobName\": \"Data-Ingestion-Flow\", \"runId\": \"RUN-101\"}' &&
+        curl -s -X PUT http://monitoring-service:8080/api/jobs -H 'Content-Type: application/json' -d '{\"jobName\": \"Data-Ingestion-Flow\", \"runId\": \"RUN-101\", \"status\": \"SUCCESS\"}' &&
+        curl -s -X POST http://monitoring-service:8080/api/jobs -H 'Content-Type: application/json' -d '{\"jobName\": \"Nightly-Report-Gen\", \"runId\": \"RUN-202\"}' &&
+        curl -s -X PUT http://monitoring-service:8080/api/jobs -H 'Content-Type: application/json' -d '{\"jobName\": \"Nightly-Report-Gen\", \"runId\": \"RUN-202\", \"status\": \"FAILED\", \"errorMessage\": \"Timeout while accessing analytics DB\"}' &&
+        curl -s -X POST http://monitoring-service:8080/api/jobs -H 'Content-Type: application/json' -d '{\"jobName\": \"User-Profile-Sync\", \"runId\": \"SYNC-303\"}' &&
+        echo 'Seeding completed successfully.'
+      "
